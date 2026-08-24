@@ -1,0 +1,564 @@
+<title>VS Code Jupyter 노트북 다루기</title>
+<meta name="description" content="VS Code에서 주피터 노트북을 만들고 실행하는 절차와, 작업을 편하게 만들어주는 확장 프로그램 정리">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --surface-alt: #f1efe9;
+    --ink: #1c232e;
+    --ink-soft: #5b6472;
+    --ink-faint: #8c93a0;
+    --accent: #2f5fd1;
+    --accent-soft: #e7edfc;
+    --accent-warm: #da6a17;
+    --accent-warm-soft: #fceee0;
+    --line: #e4e1d9;
+    --good: #1e8a5f;
+    --good-soft: #e4f5ec;
+    --code-bg: #1c232e;
+    --code-ink: #e8eaee;
+    --shadow: 0 1px 2px rgba(28,35,46,0.04), 0 8px 24px -12px rgba(28,35,46,0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161d;
+      --surface: #181d26;
+      --surface-alt: #1f2531;
+      --ink: #e8eaee;
+      --ink-soft: #a7aebb;
+      --ink-faint: #767e8c;
+      --accent: #7099f5;
+      --accent-soft: #1e2a47;
+      --accent-warm: #f09150;
+      --accent-warm-soft: #3a2717;
+      --line: #2a303c;
+      --good: #4cc48f;
+      --good-soft: #16332a;
+      --code-bg: #0e1319;
+      --code-ink: #d9dee6;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12161d;
+    --surface: #181d26;
+    --surface-alt: #1f2531;
+    --ink: #e8eaee;
+    --ink-soft: #a7aebb;
+    --ink-faint: #767e8c;
+    --accent: #7099f5;
+    --accent-soft: #1e2a47;
+    --accent-warm: #f09150;
+    --accent-warm-soft: #3a2717;
+    --line: #2a303c;
+    --good: #4cc48f;
+    --good-soft: #16332a;
+    --code-bg: #0e1319;
+    --code-ink: #d9dee6;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+  }
+
+  header.page-head {
+    margin-bottom: 3.5rem;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    margin-bottom: 1.25rem;
+  }
+
+  h1 {
+    font-size: clamp(1.7rem, 4vw, 2.35rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.9rem;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .lede {
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    max-width: 58ch;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.35rem;
+    text-wrap: balance;
+  }
+
+  .section-intro {
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+    margin: 0 0 1.75rem;
+    max-width: 60ch;
+  }
+
+  section {
+    margin-bottom: 3.75rem;
+  }
+
+  section + section {
+    padding-top: 3.75rem;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Step list */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    counter-reset: step;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 1rem;
+    padding: 1.4rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .step:first-child { border-top: none; }
+
+  .step-num {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--accent);
+    padding-top: 0.15rem;
+  }
+
+  .step-body h3 {
+    font-size: 1.02rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+  }
+
+  .step-body p {
+    margin: 0 0 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .step-body p:last-child { margin-bottom: 0; }
+
+  kbd {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82em;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.1em 0.45em;
+    color: var(--ink);
+  }
+
+  code.inline {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.88em;
+    background: var(--surface-alt);
+    border-radius: 4px;
+    padding: 0.15em 0.4em;
+    color: var(--ink);
+  }
+
+  .cmd-block {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin: 0.6rem 0 0;
+  }
+
+  /* shortcut table */
+  .shortcut-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+
+  table.shortcuts {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    min-width: 420px;
+  }
+
+  table.shortcuts th {
+    text-align: left;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.shortcuts td {
+    padding: 0.75rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    vertical-align: middle;
+  }
+
+  table.shortcuts tr:last-child td { border-bottom: none; }
+
+  table.shortcuts td:first-child { color: var(--ink); }
+
+  /* callout */
+  .callout {
+    background: var(--accent-warm-soft);
+    border: 1px solid color-mix(in srgb, var(--accent-warm) 35%, transparent);
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem;
+    margin-top: 1.75rem;
+  }
+
+  .callout-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--accent-warm);
+    margin-bottom: 0.5rem;
+  }
+
+  .callout p {
+    margin: 0 0 0.6rem;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout ol, .callout ul {
+    margin: 0.4rem 0 0.6rem;
+    padding-left: 1.2rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .callout li { margin-bottom: 0.3rem; }
+
+  /* extension cards */
+  .ext-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.9rem;
+  }
+
+  .ext-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ext-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .ext-name {
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: var(--ink);
+  }
+
+  .ext-id {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    margin-top: 0.15rem;
+  }
+
+  .badge {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge.bundle { background: var(--good-soft); color: var(--good); }
+  .badge.pick { background: var(--accent-soft); color: var(--accent); }
+
+  .ext-desc {
+    font-size: 0.87rem;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+
+  .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; display: inline-block; }
+  .dot.bundle { background: var(--good); }
+  .dot.pick { background: var(--accent); }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  footer a { color: var(--ink-soft); }
+
+  @media (max-width: 520px) {
+    .step { grid-template-columns: 1.8rem 1fr; }
+    .wrap { padding: 3rem 1.1rem 4rem; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <span class="eyebrow">VS Code · Jupyter</span>
+    <h1>VS Code에서 주피터 노트북 만들고 다루기</h1>
+    <p class="lede">.ipynb 파일을 새로 만들어 실행하는 절차와, 셀 작업을 더 편하게 만들어주는 확장 프로그램을 정리했습니다. 로컬 파이썬 환경(가상환경)에 커널을 연결해 운영하는 방법도 함께 담았습니다.</p>
+  </header>
+
+  <section id="setup">
+    <h2>1. 노트북 만들고 실행하기</h2>
+    <p class="section-intro">Python 확장과 인터프리터만 준비되어 있으면 별도의 Jupyter 설치 없이도 VS Code 안에서 바로 노트북을 실행할 수 있습니다.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h3>Python 확장 설치 &amp; 인터프리터 선택</h3>
+          <p>마켓플레이스에서 <strong>Python</strong>(ms-python.python)을 설치합니다. Jupyter 관련 확장은 이 확장을 설치하는 순간 함께 딸려 들어옵니다.</p>
+          <p><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> → <code class="inline">Python: Select Interpreter</code>로 노트북에서 사용할 파이썬 환경(가상환경, 콘다, 도커 컨테이너 등)을 지정합니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h3>새 노트북 만들기</h3>
+          <p><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> → <code class="inline">Create: New Jupyter Notebook</code>을 실행하거나, 탐색기에서 확장자가 <code class="inline">.ipynb</code>인 파일을 직접 만들면 됩니다. 저장할 때는 <kbd>Ctrl</kbd>+<kbd>S</kbd>로 그대로 저장하면 됩니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h3>커널 선택</h3>
+          <p>노트북 우측 상단의 커널 선택기에서 실행에 쓸 커널을 고릅니다. ipykernel이 없는 환경을 고르면 VS Code가 설치를 제안합니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <h3>셀 작성 &amp; 실행</h3>
+          <p>셀 하나는 코드 또는 마크다운입니다. 셀 좌측 하단의 언어 선택기로 전환할 수 있습니다.</p>
+          <div class="shortcut-wrap" style="margin-top:0.6rem;">
+            <table class="shortcuts">
+              <thead><tr><th>동작</th><th>단축키</th></tr></thead>
+              <tbody>
+                <tr><td>현재 셀 실행</td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td></tr>
+                <tr><td>실행 후 아래 새 셀 삽입</td><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td></tr>
+                <tr><td>실행 후 커서 유지, 새 셀 삽입</td><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td></tr>
+                <tr><td>전체 실행 / 이 셀 이전(이후) 전체 실행</td><td>툴바의 Run All 계열 메뉴</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-body">
+          <h3>변수 탐색기 &amp; 데이터 뷰어</h3>
+          <p>셀을 한 번 실행한 뒤 툴바의 <strong>Variables</strong> 아이콘을 누르면 현재 값을 가진 변수 목록이 뜹니다. 표 형태 데이터는 더블클릭하면 정렬·필터가 되는 데이터 뷰어로 열립니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">06</div>
+        <div class="step-body">
+          <h3>디버깅</h3>
+          <p>ipykernel 6 이상이면 <strong>Run by Line</strong>(한 줄씩 실행)과 <strong>Debug Cell</strong>(중단점을 건 전체 디버거) 두 가지 방식을 셀 툴바에서 바로 쓸 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-head">🐍 로컬 파이썬 환경에 커널 연결하기</div>
+      <p>실습마다 독립된 가상환경을 쓰고 있다면, 그 환경을 그대로 노트북 커널로 등록해서 씁니다.</p>
+      <ol>
+        <li>터미널에서 가상환경 생성 &amp; 활성화: <code class="inline">python -m venv .venv</code></li>
+        <li>활성화한 상태에서 커널 패키지 설치: <code class="inline">pip install ipykernel</code></li>
+        <li>커널 선택기에서 해당 <code class="inline">.venv</code> 인터프리터를 고르면 VS Code가 필요한 커널 등록을 자동으로 처리합니다</li>
+      </ol>
+      <p>여러 실습 환경을 번갈아 쓴다면 <code class="inline">python -m ipykernel install --user --name=실습환경이름</code>으로 이름을 지정해두면 커널 선택기에서 구분하기 쉽습니다.</p>
+    </div>
+  </section>
+
+  <section id="extensions">
+    <h2>2. 추천 확장 프로그램</h2>
+    <p class="section-intro">Jupyter 확장을 설치하면 4개가 자동으로 딸려 옵니다. 나머지는 필요에 따라 골라 설치하면 좋은 것들입니다.</p>
+
+    <div class="legend">
+      <span><i class="dot bundle"></i>Jupyter 설치 시 자동 포함</span>
+      <span><i class="dot pick"></i>따로 설치하면 좋음</span>
+    </div>
+
+    <div class="ext-grid">
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Python</span><span class="ext-id">ms-python.python</span></div>
+          <span class="badge pick">필수</span>
+        </div>
+        <p class="ext-desc">인터프리터 선택, 린팅, Pylance를 포함해 파이썬 작업 전반의 기반이 되는 확장. 이게 있어야 노트북도 동작합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter</span><span class="ext-id">ms-toolsai.jupyter</span></div>
+          <span class="badge pick">필수</span>
+        </div>
+        <p class="ext-desc">.ipynb 편집, 셀 실행, 인터랙티브 창을 담당하는 핵심 확장. 아래 4개를 함께 설치합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter Keymap</span><span class="ext-id">ms-toolsai.jupyter-keymap</span></div>
+          <span class="badge bundle">자동 포함</span>
+        </div>
+        <p class="ext-desc">고전 Jupyter와 동일한 단축키 배치를 그대로 씁니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter Notebook Renderers</span><span class="ext-id">ms-toolsai.jupyter-renderers</span></div>
+          <span class="badge bundle">자동 포함</span>
+        </div>
+        <p class="ext-desc">LaTeX, Plotly, Vega 같은 출력 형식을 노트북 안에서 바로 렌더링합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter Cell Tags</span><span class="ext-id">ms-toolsai.vscode-jupyter-cell-tags</span></div>
+          <span class="badge bundle">자동 포함</span>
+        </div>
+        <p class="ext-desc">셀에 태그를 달아 파이프라인 도구(예: papermill)와 연동할 때 유용합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter Slide Show</span><span class="ext-id">ms-toolsai.vscode-jupyter-slideshow</span></div>
+          <span class="badge bundle">자동 포함</span>
+        </div>
+        <p class="ext-desc">셀 단위로 슬라이드 유형을 지정해 노트북을 발표 자료로 내보낼 수 있게 해줍니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Pylance</span><span class="ext-id">ms-python.vscode-pylance</span></div>
+          <span class="badge bundle">자동 포함</span>
+        </div>
+        <p class="ext-desc">Python 확장에 딸려오는 언어 서버. 노트북 셀에서도 자동완성·타입 힌트가 그대로 동작합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Data Wrangler</span><span class="ext-id">ms-toolsai.datawrangler</span></div>
+          <span class="badge pick">추천</span>
+        </div>
+        <p class="ext-desc">데이터프레임을 표로 보면서 필터·정렬·결측치 처리를 클릭만으로 하고, 그 과정을 코드로도 받을 수 있습니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Python Environment Manager</span><span class="ext-id">donjayamanne.python-environment-manager</span></div>
+          <span class="badge pick">추천</span>
+        </div>
+        <p class="ext-desc">사이드바에서 로컬 venv·conda 환경 목록을 한눈에 보고 만들기·삭제·패키지 설치까지 처리합니다.</p>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-top">
+          <div><span class="ext-name">Jupyter PowerToys</span><span class="ext-id">ms-toolsai.vscode-jupyter-powertoys</span></div>
+          <span class="badge pick">실험적</span>
+        </div>
+        <p class="ext-desc">Jupyter 팀이 미리 써보게 공개한 실험적 기능 모음. 정식 기능이 되기 전 미리 체험하고 싶을 때만 설치하면 됩니다.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    Microsoft 공식 문서(<a href="https://code.visualstudio.com/docs/datascience/jupyter-notebooks" target="_blank" rel="noopener">code.visualstudio.com</a>)와 VS Code Marketplace의 Jupyter 확장 페이지를 바탕으로 정리했습니다.
+  </footer>
+
+</div>
