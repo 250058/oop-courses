@@ -591,6 +591,28 @@ p1.name = <span class="str">"철수"</span>
         </div>
       </div>
     </div>
+
+    <h3>🛠️ 객체 설계하기</h3>
+    <p>지금까지 배운 개념(클래스 정의, 객체 생성, 인스턴스 변수·메서드, 클래스 변수·메서드)을 직접 활용해 다음 상황을 클래스로 설계해보자.</p>
+
+    <div class="problem">
+      <div class="problem-head">
+        <span class="pnum">설계</span><span class="ptitle">도서관 대출 관리 — Book 클래스</span>
+        <span class="ptags"><span class="tag">클래스 변수</span><span class="tag">클래스 메서드</span><span class="tag">인스턴스 변수·메서드</span></span><span class="diff">★★</span>
+      </div>
+      <div class="problem-body">
+        <p><strong>상황:</strong> 대구과학고 도서관에서 책 대출 현황을 관리하는 프로그램을 만들려고 한다. 다음 요구사항을 만족하는 <code class="inline">Book</code> 클래스를 작성하시오.</p>
+        <ol>
+          <li>모든 책은 <code class="inline">library_name = "대구과학고 도서관"</code>이라는 값을 공통으로 갖는다 (클래스 변수).</li>
+          <li>각 책은 <code class="inline">title</code>(제목)과 <code class="inline">is_borrowed</code>(대출 여부, 생성 시 <code class="inline">False</code>)를 개별적으로 갖는다 (인스턴스 변수).</li>
+          <li><code class="inline">borrow()</code> 메서드: 대출되어 있지 않은 책이면 <code class="inline">is_borrowed</code>를 <code class="inline">True</code>로 바꾸고 <code class="inline">"{title}을(를) 대출했습니다."</code>를 출력한다. 이미 대출 중이면 <code class="inline">"이미 대출 중인 책입니다."</code>를 출력한다.</li>
+          <li><code class="inline">return_book()</code> 메서드: 대출 중인 책이면 <code class="inline">is_borrowed</code>를 <code class="inline">False</code>로 바꾸고 <code class="inline">"{title}을(를) 반납했습니다."</code>를 출력한다.</li>
+          <li>현재 <strong>대출 중인 책의 총 권수</strong>를 클래스 변수 <code class="inline">total_borrowed</code>로 추적한다 — 어떤 책이든 대출되면 1 증가, 반납되면 1 감소해야 한다.</li>
+          <li><code class="inline">@classmethod</code>로 <code class="inline">get_total_borrowed(cls)</code>를 만들어, 현재 대출 중인 책의 총 권수를 반환하게 한다.</li>
+        </ol>
+        <p style="font-size:14px;color:var(--dim)">힌트: <code class="inline">total_borrowed</code>는 특정 책 한 권이 아니라 도서관 전체가 공유하는 값이므로 클래스 변수로 관리해야 한다. 만약 인스턴스 변수로 잘못 만들면 어떤 문제가 생기는지도 함께 생각해보자.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -619,6 +641,22 @@ p1.name = <span class="str">"철수"</span>
     <span class="kw">def</span> <span class="fn">name</span>(self, new):
         <span class="kw">if</span> <span class="kw">len</span>(new) &lt; 2: <span class="kw">raise</span> ValueError(<span class="str">"이름은 2글자 이상"</span>)
         self._name = new</pre>
+
+    <h3>@property / @name.setter는 실제로 어떻게 동작하는가</h3>
+    <p><code class="inline">@property</code>가 붙은 <code class="inline">name</code> 메서드는 <code class="inline">()</code> 없이 <strong>속성처럼</strong> 접근할 수 있게 만든다. 여기까지는 <strong>읽기만</strong> 가능하며, <code class="inline">u.name = "이영희"</code>처럼 값을 대입하려 하면 <code class="inline">AttributeError: can't set attribute</code>가 발생한다. 이를 가능하게 하는 것이 <code class="inline">@name.setter</code>다.</p>
+    <p><code class="inline">@name.setter</code>는 <strong>"방금 <code class="inline">@property</code>로 만든 <code class="inline">name</code>이라는 프로퍼티 객체에, setter 함수를 추가로 등록한다"</strong>는 뜻이다. <code class="inline">name</code>이라는 이름의 함수가 두 번 정의된 것처럼 보이지만, 실제로는 하나의 <code class="inline">property</code> 객체가 "읽기용 함수(getter)"와 "쓰기용 함수(setter)"를 각각 속성으로 가지고 있는 것이다.</p>
+<pre>u = User(<span class="str">"김철수"</span>)
+
+u.name = <span class="str">"이영희"</span>     <span class="cm"># 대입문처럼 보이지만, 실제로는</span>
+                      <span class="cm"># User.name.fset(u, "이영희") 가 호출됨</span>
+                      <span class="cm"># 즉 setter 함수의 new = "이영희"
+
+<span class="kw">print</span>(u.name)         <span class="cm"># 이영희 — getter 함수 호출</span>
+
+u.name = <span class="str">"이"</span>          <span class="cm"># ValueError: 이름은 2글자 이상</span>
+                      <span class="cm"># setter 안의 검증 로직이 실행됨</span></pre>
+    <p><code class="inline">u.name = "이영희"</code>라는 평범한 대입문이 실제로는 <strong><code class="inline">name</code> 메서드(setter)를 호출</strong>하는 것으로 변환된다. 그래서 대입하는 것처럼 보이지만 그 순간 <strong>검증 로직이 자동으로 실행</strong>된다.</p>
+    <div class="note"><b>왜 이렇게 설계하는가:</b> Java였다면 <code class="inline">getName()</code>, <code class="inline">setName()</code>처럼 명시적인 메서드 호출을 쓰지만, 파이썬은 <strong>호출하는 쪽 코드는 평범한 속성 접근(<code class="inline">u.name</code>, <code class="inline">u.name = ...</code>)처럼 유지</strong>하면서 내부적으로 검증·가공 로직을 끼워 넣을 수 있게 해준다. 처음엔 그냥 <code class="inline">self.name</code>으로 만들었다가, 나중에 검증이 필요해지면 <code class="inline">@property</code>/<code class="inline">@setter</code>로 바꿔도 <strong>호출하는 쪽 코드는 전혀 수정할 필요가 없다</strong>는 것이 핵심 이점이다.</div>
 
     <h3>② 상속 (Inheritance)</h3>
     <ul>
@@ -728,19 +766,43 @@ C()
     <div class="note"><b>정리:</b> 문법적 강제는 아니지만, <code class="inline">__init__</code>을 오버라이딩했다면 <code class="inline">super().__init__(...)</code> 호출이 사실상의 표준이다. 생략하면 "부모의 속성이 누락된, 불완전하게 초기화된 객체"가 조용히 만들어져 디버깅하기 까다로운 버그의 원인이 된다.</div>
 
     <h3>③ 다형성 (Polymorphism)</h3>
-    <p>같은 이름의 메서드가 객체의 종류에 따라 다르게 동작한다. 파이썬은 <span class="term">덕 타이핑(Duck Typing)</span>을 지원한다: 상속 관계가 없어도 같은 이름의 메서드만 있으면 동일하게 다룰 수 있다.</p>
-    <p><strong>상황:</strong> 여러 동물이 각자 다른 소리를 낸다. 소리를 재생하는 함수를 만들 때, 그 함수가 "지금 들어온 게 개인지 오리인지" 일일이 검사하지 않고도 동작하게 만들고 싶다.</p>
-<pre><span class="kw">class</span> <span class="fn">Dog</span>:
+    <p>같은 이름의 메서드가 객체의 종류에 따라 다르게 동작한다. 파이썬에서 다형성을 구현하는 방법은 크게 두 가지다: <strong>상속 기반</strong>(공통 부모를 상속받아 오버라이딩)과, 파이썬만의 특징인 <strong>덕 타이핑</strong>(상속 관계 없이도 같은 이름의 메서드만 있으면 동일하게 취급)이다.</p>
+
+    <p><strong>상황:</strong> 동물원 관리 프로그램에서 여러 동물의 울음소리를 재생해야 한다. 동물 종류가 늘어나도 소리를 재생하는 코드는 수정하고 싶지 않다. 우선 <strong>상속</strong>을 이용해 "모든 동물은 Animal이다"라는 관계를 명시적으로 표현해보자.</p>
+<pre><span class="kw">class</span> <span class="fn">Animal</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(self):
+        <span class="kw">raise</span> NotImplementedError    <span class="cm"># 자식이 반드시 오버라이딩해야 함</span>
+
+<span class="kw">class</span> <span class="fn">Dog</span>(Animal):
     <span class="kw">def</span> <span class="fn">speak</span>(self): <span class="kw">return</span> <span class="str">"멍멍!"</span>
 
-<span class="kw">class</span> <span class="fn">Duck</span>:                       <span class="cm"># Dog와 아무 상속 관계 없음</span>
+<span class="kw">class</span> <span class="fn">Duck</span>(Animal):
     <span class="kw">def</span> <span class="fn">speak</span>(self): <span class="kw">return</span> <span class="str">"꽥꽥!"</span>
 
-<span class="kw">def</span> <span class="fn">make_sound</span>(animal):
-    <span class="kw">print</span>(animal.speak())          <span class="cm"># speak()만 있으면 어떤 객체든 OK</span>
+<span class="kw">def</span> <span class="fn">make_sound</span>(animal: Animal):     <span class="cm"># "Animal이어야 한다"는 관계가 타입 힌트로 명시됨</span>
+    <span class="kw">print</span>(animal.speak())
 
 make_sound(Dog())    <span class="cm"># 멍멍!</span>
 make_sound(Duck())   <span class="cm"># 꽥꽥!  — 같은 코드, 다른 동작 = 다형성</span></pre>
+
+    <p><strong>상황:</strong> 이번엔 서로 <strong>아무 상속 관계가 없는</strong> 클래스들을 같은 방식으로 다루고 싶다고 하자. 굳이 공통 부모를 만들 필요 없이, 그저 "필요한 메서드만 갖고 있으면" 동일하게 취급되도록 설계할 수 있을까? — 이때 쓰는 것이 <span class="term">덕 타이핑(Duck Typing)</span>이다.</p>
+<pre><span class="kw">class</span> <span class="fn">Robot</span>:                       <span class="cm"># Animal과 아무 상속 관계 없음</span>
+    <span class="kw">def</span> <span class="fn">speak</span>(self): <span class="kw">return</span> <span class="str">"삐빅!"</span>
+
+<span class="kw">def</span> <span class="fn">make_sound</span>(thing):              <span class="cm"># 타입을 명시하지 않음</span>
+    <span class="kw">print</span>(thing.speak())              <span class="cm"># speak()만 있으면 어떤 객체든 OK</span>
+
+make_sound(Dog())      <span class="cm"># 멍멍!</span>
+make_sound(Robot())    <span class="cm"># 삐빅!  — Animal을 전혀 상속하지 않았는데도 동일하게 동작</span></pre>
+
+    <div class="note">
+      <b>두 방식의 차이:</b>
+      <ul style="margin-top:6px">
+        <li><strong>상속 기반</strong>: <code class="inline">Animal</code>이라는 공통 부모가 관계를 명시적으로 보장한다. <code class="inline">speak()</code>를 깜빡하면(추상 메서드로 만들었을 경우) <strong>인스턴스화 시점에 즉시</strong> 오류가 드러난다.</li>
+        <li><strong>덕 타이핑</strong>: 공통 부모가 필요 없어 더 유연하지만, <code class="inline">speak()</code>가 없는 객체를 넘기면 <strong>실제로 호출되는 순간에야</strong> <code class="inline">AttributeError</code>가 발생한다(런타임에야 발견됨).</li>
+      </ul>
+      상속 기반 다형성은 이미 <strong>② 상속</strong>에서 다룬 오버라이딩과 원리가 같다 — <code class="inline">Cat.speak()</code>가 <code class="inline">Animal.speak()</code>를 오버라이딩한 것도 다형성의 한 예다. 덕 타이핑은 그 위에 파이썬이 추가로 허용하는, 상속 없이도 가능한 더 유연한 방식이다.
+    </div>
 
     <h3>④ 추상화 (Abstraction)</h3>
     <p><code class="inline">abc</code> 모듈의 <span class="term">추상 클래스(ABC)</span>는 직접 인스턴스화할 수 없고, <code class="inline">@abstractmethod</code>가 붙은 메서드를 자식이 <strong>반드시 구현하도록 강제</strong>한다. 인터페이스를 명세하는 도구다.</p>
@@ -827,11 +889,11 @@ c = Cat(<span class="str">"나비"</span>, <span class="str">"검정"</span>)
       </div>
 
       <div class="quiz">
-        <p class="quiz-q"><span class="qnum">2-4</span>다음 함수가 <code class="inline">Dog</code>와 <code class="inline">Duck</code> 모두에 대해 동작하는 이유를 "덕 타이핑"이라는 용어를 사용해 설명하시오.</p>
+        <p class="quiz-q"><span class="qnum">2-4</span>다음 함수가 <code class="inline">Dog</code>(Animal 상속)와 <code class="inline">Robot</code>(Animal과 무관) 모두에 대해 동작하는 이유를 "덕 타이핑"이라는 용어를 사용해 설명하시오.</p>
         <div class="quiz-body">
-<pre><span class="kw">def</span> <span class="fn">make_sound</span>(animal): <span class="kw">print</span>(animal.speak())</pre>
+<pre><span class="kw">def</span> <span class="fn">make_sound</span>(thing): <span class="kw">print</span>(thing.speak())</pre>
           <details class="answer"><summary>정답 보기</summary>
-            <div class="answer-body">파이썬은 인자의 타입을 명시적으로 검사하지 않고, 그 객체가 필요한 메서드(<code class="inline">speak</code>)를 가지고 있는지만으로 동작을 결정하는 <b>덕 타이핑</b>을 지원한다. <code class="inline">Dog</code>와 <code class="inline">Duck</code>은 상속 관계가 전혀 없어도 <code class="inline">speak()</code>라는 이름의 메서드만 있으면 <code class="inline">make_sound</code> 함수에서 동일하게 다뤄진다.</div>
+            <div class="answer-body">파이썬은 인자의 타입을 명시적으로 검사하지 않고, 그 객체가 필요한 메서드(<code class="inline">speak</code>)를 가지고 있는지만으로 동작을 결정하는 <b>덕 타이핑</b>을 지원한다. <code class="inline">Robot</code>은 <code class="inline">Animal</code>을 전혀 상속하지 않아 <code class="inline">Dog</code>와 아무 관계가 없지만, <code class="inline">speak()</code>라는 이름의 메서드만 있으면 <code class="inline">make_sound</code> 함수에서 동일하게 다뤄진다.</div>
           </details>
         </div>
       </div>
