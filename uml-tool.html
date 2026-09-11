@@ -38,25 +38,27 @@ html,body{margin:0;padding:0;height:100%;background:var(--navy-deep);font-family
   background:linear-gradient(135deg, var(--navy-deep), var(--navy));
   border-bottom:3px solid var(--amber);
   flex-shrink:0;
+  /* 화면 비율/크기가 바뀌어도 높이 고정 */
+  height:75px;min-height:75px;max-height:75px;overflow:hidden;white-space:nowrap;
 }
 .titleblock img.ci{height:52px;width:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));background:#fff;border-radius:6px;padding:3px;}
-.titleblock .tb-text{display:flex;flex-direction:column;gap:2px;}
-.titleblock h1{margin:0;font-size:19px;font-weight:700;color:#fff;letter-spacing:.3px;}
-.titleblock .tb-sub{font-size:11.5px;color:#B9CBDB;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;}
+.titleblock .tb-text{display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden;}
+.titleblock h1{margin:0;font-size:19px;font-weight:700;color:#fff;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.titleblock .tb-sub{font-size:11.5px;color:#B9CBDB;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .titleblock .tb-spacer{flex:1;}
 .titleblock .tb-badge{
   font-family:var(--mono);font-size:11px;color:var(--amber);
   border:1px solid rgba(232,163,61,.5);padding:4px 10px;border-radius:3px;
-  letter-spacing:.5px;
+  letter-spacing:.5px;flex-shrink:0;
 }
 
 /* ---------- Tabs ---------- */
-.tabs{display:flex;background:var(--navy-mid);flex-shrink:0;padding:0 18px;gap:2px;}
+.tabs{display:flex;background:var(--navy-mid);flex-shrink:0;padding:0 18px;gap:2px;height:40px;min-height:40px;max-height:40px;overflow:hidden;white-space:nowrap;}
 .tab-btn{
   appearance:none;border:none;cursor:pointer;background:transparent;
   color:#C7D6E3;font-family:var(--sans);font-size:13.5px;font-weight:600;
-  padding:11px 18px 9px;border-bottom:3px solid transparent;
-  display:flex;align-items:center;gap:8px;transition:all .15s;
+  padding:0 18px;border-bottom:3px solid transparent;height:100%;
+  display:flex;align-items:center;gap:8px;transition:all .15s;white-space:nowrap;flex-shrink:0;
 }
 .tab-btn .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.55;}
 .tab-btn:hover{color:#fff;background:rgba(255,255,255,.05);}
@@ -87,6 +89,8 @@ html,body{margin:0;padding:0;height:100%;background:var(--navy-deep);font-family
 .tbtn.danger:hover{border-color:var(--red);background:#FDEEEC;}
 .tbtn.primary{background:var(--amber);border-color:var(--amber-deep);color:#3A2A0A;font-weight:600;}
 .tbtn.primary:hover{background:var(--amber-deep);color:#fff;}
+.tbtn:disabled{opacity:.4;cursor:default;}
+.tbtn:disabled:hover{border-color:#CBD3D8;background:#fff;}
 .status-text{font-size:12px;color:var(--ink-soft);font-style:italic;margin-left:auto;padding-left:10px;white-space:nowrap;}
 
 /* ---------- Workspace ---------- */
@@ -120,7 +124,10 @@ canvas.select-cursor{cursor:default;}
 .legend-item svg{flex-shrink:0;}
 .legend-item .li-text{font-size:11.5px;color:var(--ink-soft);line-height:1.4;}
 .legend-item .li-text b{color:var(--ink);font-weight:600;}
-.legend-toggle-btn{position:absolute;top:14px;right:14px;z-index:19;}
+.workspace-corner{position:absolute;top:14px;right:14px;z-index:19;display:flex;gap:8px;}
+/* 상단(타이틀)·하단(푸터) 바 숨기기 */
+body.bars-hidden .titleblock,
+body.bars-hidden .titleblock-footer{display:none;}
 
 /* ---------- Scenario panel (실습 시나리오, 화면 오른쪽에서 여닫히는 레이어) ---------- */
 .scenario-panel{
@@ -214,12 +221,14 @@ canvas.select-cursor{cursor:default;}
 .titleblock-footer{
   display:flex;align-items:stretch;background:var(--navy-deep);border-top:2px solid var(--amber);flex-shrink:0;
   font-family:var(--mono);font-size:11px;color:#B9CBDB;
+  /* 화면 비율/크기가 바뀌어도 높이 고정 */
+  height:44px;min-height:44px;max-height:44px;overflow:hidden;white-space:nowrap;
 }
-.tbf-cell{padding:6px 16px;border-right:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;justify-content:center;gap:1px;}
+.tbf-cell{padding:0 16px;border-right:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;justify-content:center;gap:1px;flex-shrink:0;white-space:nowrap;}
 .tbf-cell .tbf-label{font-size:9px;letter-spacing:1px;color:#7E97AC;text-transform:uppercase;}
 .tbf-cell .tbf-val{color:#E7EEF3;font-size:11.5px;}
 .tbf-spacer{flex:1;}
-.tbf-copy{padding:6px 16px;display:flex;align-items:center;color:#8FA6B8;font-size:10.5px;font-family:var(--sans);}
+.tbf-copy{padding:0 16px;display:flex;align-items:center;color:#8FA6B8;font-size:10.5px;font-family:var(--sans);white-space:nowrap;flex-shrink:0;}
 
 /* toast */
 .toast{
@@ -267,7 +276,10 @@ canvas.select-cursor{cursor:default;}
       <div class="scenario-body" id="scenarioBody"></div>
     </div>
 
-    <button class="tbtn legend-toggle-btn" id="legendToggleBtn">📘 범례</button>
+    <div class="workspace-corner">
+      <button class="tbtn" id="barsToggleBtn" title="상단·하단 바 숨기기/보이기 (Ctrl+Shift+B)">⬍ 바 숨기기</button>
+      <button class="tbtn legend-toggle-btn" id="legendToggleBtn">📘 범례</button>
+    </div>
     <div class="legend-panel collapsed" id="legendPanel">
       <div class="legend-head"><span id="legendTitle">표기법 범례</span><button id="legendCloseBtn">✕</button></div>
       <div class="legend-body" id="legendBody"></div>
@@ -278,7 +290,8 @@ canvas.select-cursor{cursor:default;}
     <div class="tbf-cell"><div class="tbf-label">Drawn By</div><div class="tbf-val">이준구</div></div>
     <div class="tbf-cell"><div class="tbf-label">School</div><div class="tbf-val">대구과학고등학교</div></div>
     <div class="tbf-cell"><div class="tbf-label">Subject</div><div class="tbf-val">정보과학 · Python OOP</div></div>
-    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.0</div></div>
+    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.1</div></div>
+    <div class="tbf-cell" title="변경 사항은 브라우저(localStorage)에 자동 저장되며 새로고침 후 복원됩니다."><div class="tbf-label">Autosave</div><div class="tbf-val" id="autosaveBadge">대기</div></div>
     <div class="tbf-spacer"></div>
     <div class="tbf-copy">제작: 대구과학고 교사 이준구 · 임의 배포를 금지함</div>
   </footer>
@@ -310,6 +323,7 @@ const state = {
   boundaryDraft: null,   // temp rect while drawing a use-case system boundary
   mouse: {x:0,y:0},
   scenarioLevel: 'basic', // 'basic' | 'intermediate' | 'advanced' — 실습 시나리오 패널 현재 탭
+  zoom: { class:1, sequence:1, usecase:1 }, // 캔버스별 확대/축소 비율 (Ctrl+휠)
 
   class: {
     nodes: [],
@@ -353,19 +367,194 @@ function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1, y2-y1); }
 
 /* Ensure a canvas's backing store matches devicePixelRatio while keeping
    CSS/logical coordinates stable (so mouse math always uses logical px). */
+const ZOOM_MIN = 0.25, ZOOM_MAX = 3;
+function canvasTabOf(canvas){ return canvas.id.replace('canvas-',''); }
+function canvasZoom(canvas){ return state.zoom[canvasTabOf(canvas)] || 1; }
 function setupCanvasDPR(canvas, w, h){
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(w*dpr);
-  canvas.height = Math.round(h*dpr);
-  canvas.style.width = w+'px';
-  canvas.style.height = h+'px';
+  const z = canvasZoom(canvas);
+  canvas.width = Math.round(w*z*dpr);
+  canvas.height = Math.round(h*z*dpr);
+  canvas.style.width = (w*z)+'px';
+  canvas.style.height = (h*z)+'px';
   const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.setTransform(dpr*z,0,0,dpr*z,0,0);
   return ctx;
 }
 function canvasLogicalPoint(canvas, clientX, clientY){
   const r = canvas.getBoundingClientRect();
-  return {x: clientX-r.left, y: clientY-r.top};
+  const z = canvasZoom(canvas);
+  return {x: (clientX-r.left)/z, y: (clientY-r.top)/z};
+}
+/* Ctrl+휠: 커서 아래 지점을 고정한 채 확대/축소 */
+function zoomCanvasAt(tab, factor, clientX, clientY){
+  const wrap = $('#wrap-'+tab);
+  const canvas = $('#canvas-'+tab);
+  const oldZ = state.zoom[tab] || 1;
+  const newZ = clamp(Math.round(oldZ*factor*100)/100, ZOOM_MIN, ZOOM_MAX);
+  if (newZ === oldZ) return;
+  const r = canvas.getBoundingClientRect();
+  // 커서 아래의 논리 좌표
+  const lx = (clientX - r.left)/oldZ, ly = (clientY - r.top)/oldZ;
+  const wr = wrap.getBoundingClientRect();
+  const vx = clientX - wr.left, vy = clientY - wr.top; // wrap 내부 뷰포트 좌표
+  state.zoom[tab] = newZ;
+  renderActive();
+  wrap.scrollLeft = lx*newZ - vx;
+  wrap.scrollTop  = ly*newZ - vy;
+  setStatus(`확대 ${Math.round(newZ*100)}% (Ctrl+휠로 조절)`);
+  scheduleAutosave();
+}
+function bindCanvasZoom(){
+  ['class','sequence','usecase'].forEach(tab=>{
+    $('#wrap-'+tab).addEventListener('wheel',(e)=>{
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 1/1.1;
+      zoomCanvasAt(tab, factor, e.clientX, e.clientY);
+    }, {passive:false});
+  });
+  // 캔버스 밖에서도 Ctrl+휠이 브라우저 전체 확대로 이어지지 않게 차단
+  document.addEventListener('wheel',(e)=>{ if (e.ctrlKey || e.metaKey) e.preventDefault(); }, {passive:false});
+}
+
+/* =========================================================
+   실행 취소 / 다시 실행 (Undo / Redo) — 탭별 스냅샷 히스토리
+   ========================================================= */
+const HISTORY_MAX = 100;
+const HIST = {
+  class:    {past:[], future:[], last:null},
+  sequence: {past:[], future:[], last:null},
+  usecase:  {past:[], future:[], last:null},
+  lock: false,
+};
+function historySnapshot(tab){
+  return JSON.stringify(state[tab], (k,v)=> (k==='selected'||k==='_isNew') ? undefined : v);
+}
+// 모달로 편집 중인(아직 확정되지 않은) 새 요소가 있으면 스냅샷을 미룬다
+function historyHasPending(tab){
+  const d = state[tab];
+  return Object.keys(d).some(k => Array.isArray(d[k]) && d[k].some(x => x && x._isNew));
+}
+function historyTrack(tab){
+  if (HIST.lock || state.drag || state.boundaryDraft || historyHasPending(tab)) return;
+  const h = HIST[tab];
+  const snap = historySnapshot(tab);
+  if (snap === h.last) return;
+  if (h.last !== null){
+    h.past.push(h.last);
+    if (h.past.length > HISTORY_MAX) h.past.shift();
+    h.future.length = 0;
+  }
+  h.last = snap;
+  updateHistoryButtons();
+  scheduleAutosave();
+}
+function historyApply(tab, snap){
+  HIST.lock = true;
+  try{
+    const d = JSON.parse(snap);
+    Object.keys(d).forEach(k => { state[tab][k] = d[k]; });
+    state[tab].selected = null;
+    state.pendingSource = null;
+    state.pendingFragmentStart = null;
+    state.drag = null;
+    state.boundaryDraft = null;
+    renderActive();
+  } finally { HIST.lock = false; }
+  updateHistoryButtons();
+  scheduleAutosave();
+}
+function undoHistory(){
+  const tab = state.activeTab, h = HIST[tab];
+  if (!h.past.length){ showToast('되돌릴 작업이 없습니다.'); return; }
+  h.future.push(h.last);
+  h.last = h.past.pop();
+  historyApply(tab, h.last);
+  showToast('실행 취소');
+}
+function redoHistory(){
+  const tab = state.activeTab, h = HIST[tab];
+  if (!h.future.length){ showToast('다시 실행할 작업이 없습니다.'); return; }
+  h.past.push(h.last);
+  h.last = h.future.pop();
+  historyApply(tab, h.last);
+  showToast('다시 실행');
+}
+function historyReset(tab){
+  const h = HIST[tab];
+  h.past.length = 0; h.future.length = 0; h.last = historySnapshot(tab);
+  updateHistoryButtons();
+}
+/* =========================================================
+   자동 저장 (localStorage) — 상태가 바뀔 때마다 저장, 새로고침 시 복원
+   ========================================================= */
+const AUTOSAVE_KEY = 'uml-tool-autosave-v1';
+const AUTOSAVE_DELAY = 400; // ms, 연속 변경은 묶어서 한 번만 기록
+let autosaveTimer = null;
+function autosaveNow(){
+  autosaveTimer = null;
+  try{
+    const payload = {
+      savedAt: Date.now(),
+      uid: UID,
+      activeTab: state.activeTab,
+      zoom: state.zoom,
+      class: JSON.parse(historySnapshot('class')),
+      sequence: JSON.parse(historySnapshot('sequence')),
+      usecase: JSON.parse(historySnapshot('usecase')),
+    };
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+    setAutosaveBadge('저장됨 ' + new Date(payload.savedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+  }catch(err){ setAutosaveBadge('저장 실패'); }
+}
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(autosaveNow, AUTOSAVE_DELAY);
+}
+function setAutosaveBadge(text){
+  const b = $('#autosaveBadge');
+  if (b) b.textContent = text;
+}
+// 불러온 요소들의 id 숫자 접미사보다 UID를 크게 맞춰 새 요소와 id가 겹치지 않게 한다
+function bumpUIDFrom(obj){
+  let maxN = 0;
+  JSON.stringify(obj, (k,v)=>{
+    if (k==='id' && typeof v==='string'){ const m = v.match(/(\d+)$/); if (m) maxN = Math.max(maxN, parseInt(m[1],10)); }
+    return v;
+  });
+  if (maxN >= UID) UID = maxN + 1;
+}
+function restoreAutosave(){
+  let raw = null;
+  try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(_){ return false; }
+  if (!raw) return false;
+  try{
+    const p = JSON.parse(raw);
+    HIST.lock = true;
+    ['class','sequence','usecase'].forEach(tab=>{
+      if (p[tab]) Object.keys(p[tab]).forEach(k => { state[tab][k] = p[tab][k]; });
+      state[tab].selected = null;
+    });
+    if (p.zoom) Object.assign(state.zoom, p.zoom);
+    if (typeof p.uid === 'number') UID = Math.max(UID, p.uid);
+    bumpUIDFrom({class:state.class, sequence:state.sequence, usecase:state.usecase});
+    HIST.lock = false;
+    if (p.activeTab && $('#wrap-'+p.activeTab)) switchTab(p.activeTab); else renderActive();
+    ['class','sequence','usecase'].forEach(historyReset);
+    setAutosaveBadge('복원됨');
+    return true;
+  }catch(err){ HIST.lock = false; return false; }
+}
+function clearAutosave(){
+  try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){}
+  setAutosaveBadge('자동저장 꺼짐');
+}
+function updateHistoryButtons(){
+  const h = HIST[state.activeTab];
+  if (!h) return;
+  $all('.tbtn[data-hist="undo"]').forEach(b => b.disabled = h.past.length === 0);
+  $all('.tbtn[data-hist="redo"]').forEach(b => b.disabled = h.future.length === 0);
 }
 
 function showToast(msg){
@@ -504,8 +693,21 @@ function openModal(title, bodyEl, {onSave, saveLabel='저장', onDelete=null, de
 $('#modalOverlay').addEventListener('mousedown', (e)=>{ if (e.target === modalOverlay()) closeModal(); });
 document.addEventListener('keydown', (e)=>{
   if (e.key === 'Escape'){
-    if (modalOverlay().classList.contains('show')) closeModal();
-    else cancelPending();
+    if (modalOverlay().classList.contains('show')){ closeModal(); return; }
+    // 진행 중인 연결 취소 + 어떤 도구를 쓰고 있었든 '선택' 도구로 복귀
+    cancelPending();
+    if (state.tool !== 'select'){ setTool('select'); renderActive(); }
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    return;
+  }
+  if (e.key === 'Tab'){
+    // 모달/입력 필드 밖에서는 Tab이 툴바 버튼 사이로 포커스를 옮기며 화면이 튀는 것을 막는다
+    const tag = document.activeElement && document.activeElement.tagName;
+    const inModal = modalOverlay().classList.contains('show');
+    if (!inModal && tag!=='INPUT' && tag!=='TEXTAREA' && tag!=='SELECT'){
+      e.preventDefault();
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
   }
 });
 
@@ -597,6 +799,7 @@ function drawGrid(ctx, w, h, dotColor='#E4E9EC', spacing=24){
 }
 
 function renderClass(){
+  historyTrack('class');
   const canvas = $('#canvas-class');
   const W = CLASS_CANVAS_W, H = CLASS_CANVAS_H;
   const ctx = setupCanvasDPR(canvas, W, H);
@@ -922,8 +1125,9 @@ function seqComputeSize(){
   // 뷰포트(실제 보이는 캔버스 영역)를 항상 가득 채우도록 최소 크기를 보정
   const wrap = document.getElementById('wrap-sequence');
   if (wrap){
-    width = Math.max(width, wrap.clientWidth || 0);
-    height = Math.max(height, wrap.clientHeight || 0);
+    const z = state.zoom.sequence || 1;
+    width = Math.max(width, (wrap.clientWidth || 0)/z);
+    height = Math.max(height, (wrap.clientHeight || 0)/z);
   }
   return {width, height};
 }
@@ -955,6 +1159,7 @@ function computeActivations(lifelineId){
 }
 
 function renderSequence(){
+  historyTrack('sequence');
   const canvas = seqCanvas();
   const {width,height} = seqComputeSize();
   const ctx = setupCanvasDPR(canvas, width, height);
@@ -1302,6 +1507,7 @@ function newBoundary(x,y,w,h){ return {id:nextId('bnd'), x, y, w, h, label:'시�
 function ucActorBox(a){ return {x:a.x-24, y:a.y-32, w:48, h:80}; }
 
 function renderUsecase(){
+  historyTrack('usecase');
   const canvas = $('#canvas-usecase');
   const ctx = setupCanvasDPR(canvas, UC_CANVAS_W, UC_CANVAS_H);
   ctx.clearRect(0,0,UC_CANVAS_W,UC_CANVAS_H);
@@ -1578,6 +1784,8 @@ function msgIcon(kind){
   return `<svg width="22" height="16" viewBox="0 0 22 16">${s}</svg>`;
 }
 const ICON = {
+  undo: `<svg width="14" height="14" viewBox="0 0 16 16"><path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5H10a3.5 3.5 0 010 7H7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  redo: `<svg width="14" height="14" viewBox="0 0 16 16"><path d="M10.5 3.5l3 3-3 3M13.5 6.5H6a3.5 3.5 0 000 7h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   select: `<svg width="15" height="16" viewBox="0 0 16 16"><path d="M2 1.5 13 8 7.5 9 9.5 14 7.5 14.8 5.5 9.8 2 12.5Z" fill="currentColor"/></svg>`,
   box: `<svg width="15" height="15" viewBox="0 0 16 16"><rect x="1.5" y="2" width="13" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6" x2="14.5" y2="6" stroke="currentColor" stroke-width="1.1"/><line x1="1.5" y1="10" x2="14.5" y2="10" stroke="currentColor" stroke-width="1.1"/></svg>`,
   interface: `<svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="4.2" r="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="8" y1="6.6" x2="8" y2="14" stroke="currentColor" stroke-width="1.3"/></svg>`,
@@ -1624,11 +1832,20 @@ const TOOL_HINTS = {
 };
 
 function toolBtn(tool, label, icon){
-  return el('button',{class:'tbtn', 'data-tool':tool, type:'button', title:TOOL_HINTS[tool]||'', onclick:()=> setTool(tool)},
+  return el('button',{class:'tbtn', 'data-tool':tool, type:'button', title:TOOL_HINTS[tool]||'',
+    onclick:(e)=>{ setTool(tool); e.currentTarget.blur(); }},
     el('span',{html:icon}), label);
 }
 function actionBtn(label, icon, handler, extraClass=''){
-  return el('button',{class:'tbtn '+extraClass, type:'button', onclick:handler}, el('span',{html:icon}), label);
+  return el('button',{class:'tbtn '+extraClass, type:'button',
+    onclick:(e)=>{ e.currentTarget.blur(); handler(e); }}, el('span',{html:icon}), label);
+}
+function histBtn(kind){
+  const isUndo = kind==='undo';
+  const b = actionBtn(isUndo ? '되돌리기' : '다시실행', isUndo ? ICON.undo : ICON.redo, isUndo ? undoHistory : redoHistory);
+  b.dataset.hist = kind;
+  b.title = isUndo ? '실행 취소 (Ctrl+Z)' : '다시 실행 (Ctrl+Y / Ctrl+Shift+Z)';
+  return b;
 }
 
 function buildClassToolbar(){
@@ -1648,6 +1865,8 @@ function buildClassToolbar(){
     toolBtn('rel-dependency','의존',relIcon({end:'open',dashed:true}))
   ));
   bar.appendChild(el('div',{class:'tgroup'},
+    histBtn('undo'),
+    histBtn('redo'),
     actionBtn('삭제',ICON.trash,deleteSelectedElement,'danger'),
     actionBtn('예제',ICON.example,()=>confirmLoadExample('class')),
     actionBtn('시나리오',ICON.scenario,()=>toggleScenarioPanel())
@@ -1679,6 +1898,8 @@ function buildSequenceToolbar(){
     toolBtn('add-fragment','프래그먼트',ICON.fragment)
   ));
   bar.appendChild(el('div',{class:'tgroup'},
+    histBtn('undo'),
+    histBtn('redo'),
     actionBtn('삭제',ICON.trash,deleteSelectedElement,'danger'),
     actionBtn('예제',ICON.example,()=>confirmLoadExample('sequence')),
     actionBtn('시나리오',ICON.scenario,()=>toggleScenarioPanel())
@@ -1707,6 +1928,8 @@ function buildUsecaseToolbar(){
     toolBtn('uc-generalization','일반화',relIcon({end:'triangle'}))
   ));
   bar.appendChild(el('div',{class:'tgroup'},
+    histBtn('undo'),
+    histBtn('redo'),
     actionBtn('삭제',ICON.trash,deleteSelectedElement,'danger'),
     actionBtn('예제',ICON.example,()=>confirmLoadExample('usecase')),
     actionBtn('시나리오',ICON.scenario,()=>toggleScenarioPanel())
@@ -1797,7 +2020,14 @@ document.addEventListener('keydown',(e)=>{
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
   if ($('#modalOverlay').classList.contains('show')) return;
-  if (e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); deleteSelectedElement(); }
+  if (e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); deleteSelectedElement(); return; }
+  if ((e.ctrlKey || e.metaKey) && !e.altKey){
+    const k = e.key.toLowerCase();
+    if (k==='z' && e.shiftKey){ e.preventDefault(); redoHistory(); }
+    else if (k==='z'){ e.preventDefault(); undoHistory(); }
+    else if (k==='y'){ e.preventDefault(); redoHistory(); }
+    else if (k==='b' && e.shiftKey){ e.preventDefault(); toggleBars(); }
+  }
 });
 
 /* ---------- Class diagram canvas events ---------- */
@@ -1992,7 +2222,9 @@ window.addEventListener('mouseup',()=>{
       } else renderUsecase();
     }
   }
+  const hadDrag = !!state.drag;
   state.drag = null;
+  if (hadDrag) renderActive();
 });
 /* =========================================================
    범례 · 예제 다이어그램 · 내보내기/불러오기
@@ -2277,6 +2509,7 @@ function importJSON(tab){
       try{
         const parsed = JSON.parse(reader.result);
         const data = parsed.data || parsed;
+        bumpUIDFrom(data);
         if (tab==='class'){
           state.class.nodes = data.nodes||[]; state.class.edges = data.edges||[]; state.class.selected=null;
           renderClass();
@@ -2298,7 +2531,12 @@ function importJSON(tab){
 }
 function exportPNG(tab){
   const canvas = $('#canvas-'+tab);
+  // 화면 확대 비율과 무관하게 항상 100% 크기로 내보낸다
+  const savedZoom = state.zoom[tab];
+  state.zoom[tab] = 1; renderActive();
+  const restore = ()=>{ state.zoom[tab] = savedZoom; renderActive(); };
   canvas.toBlob(blob=>{
+    restore();
     downloadBlob(blob, `uml_${tab}_diagram.png`);
     showToast('이미지로 내보냈습니다.');
   });
@@ -2308,6 +2546,14 @@ function exportPNG(tab){
    ========================================================= */
 'use strict';
 
+function toggleBars(force){
+  const hidden = (force===undefined) ? !document.body.classList.contains('bars-hidden') : !!force;
+  document.body.classList.toggle('bars-hidden', hidden);
+  const btn = $('#barsToggleBtn');
+  if (btn) btn.textContent = hidden ? '⬍ 바 보이기' : '⬍ 바 숨기기';
+  try{ localStorage.setItem('uml-bars-hidden', hidden ? '1' : '0'); }catch(_){}
+  renderActive(); // 캔버스 영역 크기가 바뀌므로 다시 그림
+}
 function updateBadge(){
   const map = {class:'CLASS DIAGRAM', sequence:'SEQUENCE DIAGRAM', usecase:'USE CASE DIAGRAM'};
   $('#activeDiagramBadge').textContent = map[state.activeTab];
@@ -2322,6 +2568,8 @@ function switchTab(tab){
   renderLegend();
   setTool('select');
   renderActive();
+  updateHistoryButtons();
+  scheduleAutosave();
 }
 
 function initApp(){
@@ -2336,15 +2584,26 @@ function initApp(){
     if (willShow) $('#scenarioPanel').classList.add('collapsed'); // 같은 자리(우측)를 쓰므로 서로 배타적으로 표시
   });
   $('#legendCloseBtn').addEventListener('click', ()=> $('#legendPanel').classList.add('collapsed'));
+  $('#barsToggleBtn').addEventListener('click', (e)=>{ toggleBars(); e.currentTarget.blur(); });
+  try{ if (localStorage.getItem('uml-bars-hidden')==='1') toggleBars(true); }catch(_){}
   $('#scenarioCloseBtn').addEventListener('click', ()=>{
     $('#scenarioPanel').classList.add('collapsed');
     const legendBtn = $('#legendToggleBtn');
     legendBtn.style.visibility = ''; legendBtn.style.pointerEvents = '';
   });
 
+  bindCanvasZoom();
   switchTab('class');
-  loadClassExample();
-  showToast('클래스 다이어그램 예제가 준비되었습니다. 자유롭게 편집해 보세요!');
+  if (restoreAutosave()){
+    showToast('이전 작업을 자동 저장에서 복원했습니다.');
+  } else {
+    loadClassExample();
+    historyReset('class'); // 시작 예제는 되돌리기 대상이 아님
+    showToast('클래스 다이어그램 예제가 준비되었습니다. 자유롭게 편집해 보세요!');
+  }
+  // 탭을 닫거나 새로고침하기 직전에 미뤄둔 저장을 즉시 반영
+  window.addEventListener('beforeunload', ()=>{ if (autosaveTimer) autosaveNow(); });
+  document.addEventListener('visibilitychange', ()=>{ if (document.hidden && autosaveTimer) autosaveNow(); });
 
   let resizeTimer = null;
   window.addEventListener('resize', ()=>{
