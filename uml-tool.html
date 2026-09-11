@@ -291,7 +291,7 @@ body.bars-hidden .titleblock-footer{display:none;}
     <div class="tbf-cell"><div class="tbf-label">Drawn By</div><div class="tbf-val">이준구</div></div>
     <div class="tbf-cell"><div class="tbf-label">School</div><div class="tbf-val">대구과학고등학교</div></div>
     <div class="tbf-cell"><div class="tbf-label">Subject</div><div class="tbf-val">정보과학 · Python OOP</div></div>
-    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.2</div></div>
+    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.3</div></div>
     <div class="tbf-cell" title="변경 사항은 브라우저(localStorage)에 자동 저장되며 새로고침 후 복원됩니다."><div class="tbf-label">Autosave</div><div class="tbf-val" id="autosaveBadge">대기</div></div>
     <div class="tbf-spacer"></div>
     <div class="tbf-copy">제작: 대구과학고 교사 이준구 · 임의 배포를 금지함</div>
@@ -720,6 +720,9 @@ function openModal(title, bodyEl, {onSave, saveLabel='저장', onDelete=null, de
   foot.appendChild(el('button',{class:'btn save', onclick: ()=>{ const ok = onSave(); if (ok !== false) closeModal(); }}, saveLabel));
   box.appendChild(head); box.appendChild(body); box.appendChild(foot);
   modalOverlay().classList.add('show');
+  // 첫 입력칸에 바로 포커스 → 열리자마자 타이핑 가능
+  const first = body.querySelector('input[type="text"], select, textarea');
+  if (first){ first.focus(); if (first.select) first.select(); }
 }
 $('#modalOverlay').addEventListener('mousedown', (e)=>{ if (e.target === modalOverlay()) closeModal(); });
 document.addEventListener('keydown', (e)=>{
@@ -729,6 +732,25 @@ document.addEventListener('keydown', (e)=>{
     cancelPending();
     if (state.tool !== 'select'){ setTool('select'); renderActive(); }
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    return;
+  }
+  if (e.key === 'Enter' && modalOverlay().classList.contains('show') && !e.isComposing){
+    // 모달 안에서 Enter: 다음 입력칸으로 이동, 마지막 칸이면 저장
+    const a = document.activeElement;
+    const tag = a && a.tagName;
+    if (tag === 'BUTTON' || tag === 'TEXTAREA') return; // 버튼은 기본 동작(클릭) 유지
+    const fields = Array.from(modalBox().querySelectorAll('input[type="text"], select'))
+      .filter(x => !x.disabled && x.offsetParent !== null);
+    e.preventDefault();
+    const idx = fields.indexOf(a);
+    if (idx > -1 && idx < fields.length - 1){
+      const next = fields[idx + 1];
+      next.focus();
+      if (next.select) next.select();
+    } else {
+      const saveBtn = modalBox().querySelector('.btn.save');
+      if (saveBtn) saveBtn.click();
+    }
     return;
   }
   if (e.key === 'Tab'){
@@ -774,6 +796,19 @@ function field(labelText, inputEl){
 }
 function textInput(value=''){
   const i = document.createElement('input'); i.type='text'; i.value = value; return i;
+}
+// 새 요소의 예시 텍스트('클래스이름', 'field' 등)는 실제 값이 아니라 placeholder로만 보여
+// 사용자가 바로 타이핑하면 됨. 기존 요소 편집일 때는 저장된 값을 그대로 채운다.
+function focusLastInput(container, cls){
+  const rows = container.children; if (!rows.length) return;
+  const last = rows[rows.length-1];
+  const target = (cls && last.querySelector('input.'+cls)) || last.querySelector('input[type="text"]');
+  if (target) target.focus();
+}
+function exampleInput(value='', isExample=false, fallbackPlaceholder=''){
+  const i = textInput(isExample ? '' : value);
+  i.placeholder = isExample ? (value || fallbackPlaceholder) : fallbackPlaceholder;
+  return i;
 }
 function selectInput(options, value){
   const s = document.createElement('select');
@@ -1024,7 +1059,8 @@ function hitTestClass(px,py){
 /* ---------- Class editor modal ---------- */
 function openClassEditorModal(node){
   const body = el('div',{});
-  const nameInput = textInput(node.name);
+  const isNew = !!node._isNew;
+  const nameInput = exampleInput(node.name, isNew, '클래스이름');
   const typeSelect = selectInput([['', '일반 클래스'],['interface','인터페이스 («interface»)'],['abstract','추상 클래스 (Abstract)']],
     node.stereotype==='interface' ? 'interface' : (node.abstract ? 'abstract' : ''));
 
@@ -1033,27 +1069,27 @@ function openClassEditorModal(node){
 
   const attrRows = [];
   const attrListDiv = el('div',{class:'rows-list'});
-  function addAttrRow(a){
+  function addAttrRow(a, isExample=isNew){
     const vis = selectInput([['+','+'],['-','-'],['#','#'],['~','~']], a.vis);
-    const name = textInput(a.name); name.placeholder='필드명';
-    const type = textInput(a.type); type.placeholder='타입'; type.className='type-input';
+    const name = exampleInput(a.name, isExample, '필드명');
+    const type = exampleInput(a.type, isExample, '타입'); type.className='type-input';
     const del = el('button',{class:'row-del', type:'button', onclick:()=>{ row.remove(); const idx=attrRows.indexOf(rowObj); if(idx>-1) attrRows.splice(idx,1); }},'✕');
     const row = el('div',{class:'attr-row'}, vis, name, type, del);
     const rowObj = {vis,name,type};
     attrRows.push(rowObj);
     attrListDiv.appendChild(row);
   }
-  node.attributes.forEach(addAttrRow);
-  const addAttrBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=> addAttrRow({vis:'-',name:'field',type:'int'})}, '+ 속성 추가');
+  node.attributes.forEach(a=> addAttrRow(a)); // forEach의 index 인자가 isExample로 들어가지 않게
+  const addAttrBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=>{ addAttrRow({vis:'-',name:'field',type:'int'}, true); focusLastInput(attrListDiv); }}, '+ 속성 추가');
   body.appendChild(field('속성 (Attributes)', el('div',{class:'rows-box'}, attrListDiv, addAttrBtn)));
 
   const methodRows = [];
   const methodListDiv = el('div',{class:'rows-list'});
-  function addMethodRow(m){
+  function addMethodRow(m, isExample=isNew){
     const vis = selectInput([['+','+'],['-','-'],['#','#'],['~','~']], m.vis);
-    const name = textInput(m.name); name.placeholder='메서드명';
+    const name = exampleInput(m.name, isExample, '메서드명');
     const params = textInput(m.params); params.placeholder='매개변수'; params.className='params-input';
-    const ret = textInput(m.ret); ret.placeholder='반환형'; ret.className='ret-input';
+    const ret = exampleInput(m.ret, isExample, '반환형'); ret.className='ret-input';
     const absLabel = el('label',{class:'abs-chk'});
     const absChk = document.createElement('input'); absChk.type='checkbox'; absChk.checked = !!m.abstract;
     absLabel.appendChild(absChk); absLabel.appendChild(document.createTextNode('abs'));
@@ -1063,9 +1099,10 @@ function openClassEditorModal(node){
     methodRows.push(rowObj);
     methodListDiv.appendChild(row);
   }
-  node.methods.forEach(addMethodRow);
-  const addMethodBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=> addMethodRow({vis:'+',name:'method',params:'',ret:'None',abstract:false})}, '+ 메서드 추가');
-  const addInitBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=> addMethodRow({vis:'+',name:'__init__',params:'',ret:'None',abstract:false})}, '+ 생성자(__init__)');
+  node.methods.forEach(m=> addMethodRow(m));
+  const addMethodBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=>{ addMethodRow({vis:'+',name:'method',params:'',ret:'None',abstract:false}, true); focusLastInput(methodListDiv); }}, '+ 메서드 추가');
+  // 생성자는 이름이 정해져 있으므로 예시가 아니라 실제 값으로 채움
+  const addInitBtn = el('button',{class:'add-row-btn', type:'button', onclick:()=>{ addMethodRow({vis:'+',name:'__init__',params:'',ret:'None',abstract:false}, false); focusLastInput(methodListDiv, 'params-input'); }}, '+ 생성자(__init__)');
   body.appendChild(field('메서드 (Methods)', el('div',{class:'rows-box'}, methodListDiv, el('div',{style:'display:flex;gap:6px;'}, addMethodBtn, addInitBtn))));
 
   openModal(node._isNew ? '클래스 추가' : '클래스 편집', body, {
@@ -1075,8 +1112,13 @@ function openClassEditorModal(node){
       node.name = name;
       node.stereotype = typeSelect.value==='interface' ? 'interface' : '';
       node.abstract = typeSelect.value==='abstract';
-      node.attributes = attrRows.map(r=>({vis:r.vis.value,name:r.name.value.trim()||'field',type:r.type.value.trim()}));
-      node.methods = methodRows.map(r=>({vis:r.vis.value,name:r.name.value.trim()||'method',params:r.params.value.trim(),ret:r.ret.value.trim(),abstract:r.absChk.checked}));
+      // 이름을 비워둔(예시 placeholder만 남은) 행은 저장하지 않는다
+      node.attributes = attrRows
+        .map(r=>({vis:r.vis.value,name:r.name.value.trim(),type:r.type.value.trim()}))
+        .filter(a=>a.name);
+      node.methods = methodRows
+        .map(r=>({vis:r.vis.value,name:r.name.value.trim(),params:r.params.value.trim(),ret:r.ret.value.trim(),abstract:r.absChk.checked}))
+        .filter(m=>m.name);
       delete node._isNew;
       renderClass();
     },
@@ -1450,8 +1492,8 @@ function nearestMessageIndex(py){
 function openLifelineModal(l){
   const body = el('div',{});
   const typeSelect = selectInput([['actor','액터 (Actor)'],['object','객체 (Object)']], l.type);
-  const nameInput = textInput(l.name);
-  const classInput = textInput(l.className);
+  const nameInput = exampleInput(l.name, !!l._isNew, '이름');
+  const classInput = exampleInput(l.className, !!l._isNew, '클래스명');
   body.appendChild(field('종류', typeSelect));
   body.appendChild(field('이름', nameInput));
   const clsField = field('클래스명 (선택, 객체일 때)', classInput);
@@ -1744,7 +1786,7 @@ function hitTestUsecase(px,py){
 /* ---------- Modals ---------- */
 function openActorModal(a){
   const body = el('div',{});
-  const nameInput = textInput(a.name);
+  const nameInput = exampleInput(a.name, !!a._isNew, '액터 이름');
   body.appendChild(field('액터 이름', nameInput));
   openModal(a._isNew? '액터 추가':'액터 편집', body, {
     onSave: ()=>{
@@ -1762,7 +1804,7 @@ function openActorModal(a){
 }
 function openUseCaseModal(u){
   const body = el('div',{});
-  const nameInput = textInput(u.name);
+  const nameInput = exampleInput(u.name, !!u._isNew, '유스케이스 이름');
   body.appendChild(field('유스케이스 이름', nameInput));
   openModal(u._isNew? '유스케이스 추가':'유스케이스 편집', body, {
     onSave: ()=>{
@@ -1780,7 +1822,7 @@ function openUseCaseModal(u){
 }
 function openBoundaryModal(b, isNew){
   const body = el('div',{});
-  const nameInput = textInput(b.label);
+  const nameInput = exampleInput(b.label, !!isNew, '시스템 이름');
   body.appendChild(field('시스템 이름', nameInput));
   openModal(isNew? '시스템 경계 추가':'시스템 경계 편집', body, {
     onSave: ()=>{
