@@ -240,6 +240,22 @@ body.bars-hidden .titleblock-footer{display:none;}
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+/* ---------- 우클릭 도구 선택 메뉴 (클릭만 하고 드래그 안 하면 뜸) ---------- */
+.ctx-menu{
+  position:fixed;z-index:500;background:#fff;border:1px solid #CBD3D8;border-radius:8px;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);padding:6px;display:none;
+  max-height:min(480px,80vh);overflow-y:auto;min-width:168px;
+}
+.ctx-menu.show{display:block;}
+.ctx-menu-sep{height:1px;background:#EDEFF1;margin:5px 4px;}
+.ctx-menu-item{
+  display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;
+  font-size:12.5px;font-weight:500;color:var(--ink);white-space:nowrap;
+}
+.ctx-menu-item svg{flex-shrink:0;}
+.ctx-menu-item:hover{background:#EFF2F0;}
+.ctx-menu-item.active{background:var(--navy);color:#fff;}
+
 ::-webkit-scrollbar{width:11px;height:11px;}
 ::-webkit-scrollbar-track{background:var(--navy-deep);}
 ::-webkit-scrollbar-thumb{background:var(--navy-mid);border-radius:6px;border:2px solid var(--navy-deep);}
@@ -291,7 +307,7 @@ body.bars-hidden .titleblock-footer{display:none;}
     <div class="tbf-cell"><div class="tbf-label">Drawn By</div><div class="tbf-val">이준구</div></div>
     <div class="tbf-cell"><div class="tbf-label">School</div><div class="tbf-val">대구과학고등학교</div></div>
     <div class="tbf-cell"><div class="tbf-label">Subject</div><div class="tbf-val">정보과학 · Python OOP</div></div>
-    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.3</div></div>
+    <div class="tbf-cell"><div class="tbf-label">Tool Rev.</div><div class="tbf-val">v1.4</div></div>
     <div class="tbf-cell" title="변경 사항은 브라우저(localStorage)에 자동 저장되며 새로고침 후 복원됩니다."><div class="tbf-label">Autosave</div><div class="tbf-val" id="autosaveBadge">대기</div></div>
     <div class="tbf-spacer"></div>
     <div class="tbf-copy">제작: 대구과학고 교사 이준구 · 임의 배포를 금지함</div>
@@ -302,6 +318,7 @@ body.bars-hidden .titleblock-footer{display:none;}
   <div class="modal-box" id="modalBox"></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="ctx-menu" id="ctxMenu"></div>
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 
 <script>
@@ -330,12 +347,14 @@ const state = {
     nodes: [],
     edges: [],
     selected: null,       // {kind:'node'|'edge', id}
+    multi: [],             // [{kind:'node', id}, ...] — 좌클릭 드래그(마퀴) 다중 선택
   },
   sequence: {
     lifelines: [],
     messages: [],
     fragments: [],
     selected: null,
+    multi: [],
   },
   usecase: {
     actors: [],
@@ -343,6 +362,7 @@ const state = {
     boundaries: [],
     edges: [],
     selected: null,
+    multi: [],
   }
 };
 
@@ -408,6 +428,44 @@ function zoomCanvasAt(tab, factor, clientX, clientY){
 }
 /* 우클릭 드래그: 캔버스 화면 이동(패닝) */
 let panState = null; // {wrap, startX, startY, scrollLeft, scrollTop, moved}
+/* ---------- 우클릭 도구 선택 메뉴 ---------- */
+function ctxMenuEl(){ return $('#ctxMenu'); }
+function closeCtxMenu(){ ctxMenuEl().classList.remove('show'); }
+function openToolContextMenu(clientX, clientY){
+  const tab = state.activeTab;
+  const toolbar = $('#toolbar-'+tab);
+  if (!toolbar) return;
+  const menu = ctxMenuEl();
+  menu.innerHTML = '';
+  const groups = Array.from(toolbar.querySelectorAll('.tgroup'));
+  let addedAny = false;
+  groups.forEach(g=>{
+    const btns = Array.from(g.querySelectorAll('.tbtn[data-tool]'));
+    if (!btns.length) return;
+    if (addedAny) menu.appendChild(el('div',{class:'ctx-menu-sep'}));
+    btns.forEach(b=>{
+      const toolName = b.dataset.tool;
+      const item = el('div',{
+        class:'ctx-menu-item'+(state.tool===toolName?' active':''),
+        onclick:()=>{ setTool(toolName); closeCtxMenu(); }
+      }, el('span',{html:b.querySelector('span').innerHTML}), b.textContent.trim());
+      menu.appendChild(item);
+    });
+    addedAny = true;
+  });
+  if (!addedAny) return;
+  // 화면 밖으로 넘치지 않게 위치 보정
+  menu.style.left = clientX+'px';
+  menu.style.top = clientY+'px';
+  menu.classList.add('show');
+  const r = menu.getBoundingClientRect();
+  if (r.right > innerWidth) menu.style.left = Math.max(4, innerWidth - r.width - 8)+'px';
+  if (r.bottom > innerHeight) menu.style.top = Math.max(4, innerHeight - r.height - 8)+'px';
+}
+document.addEventListener('mousedown',(e)=>{
+  if (!ctxMenuEl().classList.contains('show')) return;
+  if (!ctxMenuEl().contains(e.target)) closeCtxMenu();
+});
 function bindCanvasPan(){
   ['class','sequence','usecase'].forEach(tab=>{
     const wrap = $('#wrap-'+tab);
@@ -429,8 +487,10 @@ function bindCanvasPan(){
   });
   window.addEventListener('mouseup',(e)=>{
     if (!panState || e.button !== 2) return;
+    const wasDrag = panState.moved;
     panState.wrap.classList.remove('panning');
     panState = null;
+    if (!wasDrag) openToolContextMenu(e.clientX, e.clientY); // 드래그 없이 우클릭만 → 도구 선택 메뉴
   });
   window.addEventListener('blur',()=>{
     if (panState){ panState.wrap.classList.remove('panning'); panState = null; }
@@ -460,7 +520,7 @@ const HIST = {
   lock: false,
 };
 function historySnapshot(tab){
-  return JSON.stringify(state[tab], (k,v)=> (k==='selected'||k==='_isNew') ? undefined : v);
+  return JSON.stringify(state[tab], (k,v)=> (k==='selected'||k==='_isNew'||k==='multi') ? undefined : v);
 }
 // 모달로 편집 중인(아직 확정되지 않은) 새 요소가 있으면 스냅샷을 미룬다
 function historyHasPending(tab){
@@ -634,6 +694,31 @@ function pointInEllipse(px,py,cx,cy,rx,ry){
   const nx = (px-cx)/rx, ny = (py-cy)/ry;
   return nx*nx + ny*ny <= 1;
 }
+/* ---------- 다중 선택 (마퀴 박스 선택) ---------- */
+function rectsOverlap(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+function normBox(x0,y0,x1,y1){
+  return {x:Math.min(x0,x1), y:Math.min(y0,y1), w:Math.abs(x1-x0), h:Math.abs(y1-y0)};
+}
+function isMultiSelected(tab, kind, id){
+  const multi = state[tab].multi;
+  return !!multi && multi.some(m=>m.kind===kind && m.id===id);
+}
+function clearMulti(tab){ state[tab].multi = []; }
+function drawMarquee(ctx, tab){
+  const d = state.drag;
+  if (!d || d.kind!=='box-select' || d.tab!==tab) return;
+  const r = normBox(d.x0,d.y0,d.x1,d.y1);
+  ctx.save();
+  ctx.fillStyle = 'rgba(11,61,98,.10)';
+  ctx.strokeStyle = 'rgba(11,61,98,.75)';
+  ctx.setLineDash([5,4]);
+  ctx.lineWidth = 1.2;
+  ctx.fillRect(r.x,r.y,r.w,r.h);
+  ctx.strokeRect(r.x,r.y,r.w,r.h);
+  ctx.restore();
+}
 
 /* ---------- Arrow / marker drawing (all in canvas space, given tip point + angle of the line) ---------- */
 // angle = direction FROM base TOWARD tip (radians)
@@ -728,9 +813,15 @@ $('#modalOverlay').addEventListener('mousedown', (e)=>{ if (e.target === modalOv
 document.addEventListener('keydown', (e)=>{
   if (e.key === 'Escape'){
     if (modalOverlay().classList.contains('show')){ closeModal(); return; }
-    // 진행 중인 연결 취소 + 어떤 도구를 쓰고 있었든 '선택' 도구로 복귀
+    if (ctxMenuEl().classList.contains('show')){ closeCtxMenu(); return; }
+    // 진행 중인 연결 취소 + 다중 선택 해제 + 어떤 도구를 쓰고 있었든 '선택' 도구로 복귀
     cancelPending();
-    if (state.tool !== 'select'){ setTool('select'); renderActive(); }
+    if (state[state.activeTab].multi && state[state.activeTab].multi.length){
+      clearMulti(state.activeTab);
+      state[state.activeTab].selected = null;
+    }
+    if (state.tool !== 'select'){ setTool('select'); }
+    renderActive();
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     return;
   }
@@ -910,10 +1001,11 @@ function renderClass(){
   }
   // nodes
   state.class.nodes.forEach(node => drawClassNode(ctx, node));
+  drawMarquee(ctx, 'class');
 }
 
 function drawClassNode(ctx, node){
-  const sel = state.class.selected && state.class.selected.kind==='node' && state.class.selected.id===node.id;
+  const sel = (state.class.selected && state.class.selected.kind==='node' && state.class.selected.id===node.id) || isMultiSelected('class','node',node.id);
   const {x,y,w,h,headerH,attrH} = node;
 
   ctx.save();
@@ -1295,10 +1387,11 @@ function renderSequence(){
       ctx.restore();
     }
   }
+  drawMarquee(ctx, 'sequence');
 }
 
 function drawLifeline(ctx, l){
-  const sel = state.sequence.selected && state.sequence.selected.kind==='lifeline' && state.sequence.selected.id===l.id;
+  const sel = (state.sequence.selected && state.sequence.selected.kind==='lifeline' && state.sequence.selected.id===l.id) || isMultiSelected('sequence','lifeline',l.id);
   const endY = lifelineEndY(l.id, seqComputeSize().height - 30);
 
   if (l.type==='actor'){
@@ -1628,10 +1721,11 @@ function renderUsecase(){
 
   state.usecase.actors.forEach(a => drawUCActor(ctx,a));
   state.usecase.usecases.forEach(u => drawUCOval(ctx,u));
+  drawMarquee(ctx, 'usecase');
 }
 
 function drawBoundary(ctx,b){
-  const sel = state.usecase.selected && state.usecase.selected.kind==='boundary' && state.usecase.selected.id===b.id;
+  const sel = (state.usecase.selected && state.usecase.selected.kind==='boundary' && state.usecase.selected.id===b.id) || isMultiSelected('usecase','boundary',b.id);
   ctx.save();
   ctx.fillStyle='rgba(46,124,91,.04)';
   ctx.strokeStyle = sel? '#E8A33D':'#2E7D5B';
@@ -1645,7 +1739,7 @@ function drawBoundary(ctx,b){
 }
 
 function drawUCActor(ctx,a){
-  const sel = state.usecase.selected && state.usecase.selected.kind==='actor' && state.usecase.selected.id===a.id;
+  const sel = (state.usecase.selected && state.usecase.selected.kind==='actor' && state.usecase.selected.id===a.id) || isMultiSelected('usecase','actor',a.id);
   drawActorGlyph(ctx, a.x, a.y, sel);
   ctx.font='600 12.5px "IBM Plex Sans KR", sans-serif';
   ctx.fillStyle='#182430'; ctx.textAlign='center';
@@ -1659,7 +1753,7 @@ function drawUCActor(ctx,a){
 }
 
 function drawUCOval(ctx,u){
-  const sel = state.usecase.selected && state.usecase.selected.kind==='usecase' && state.usecase.selected.id===u.id;
+  const sel = (state.usecase.selected && state.usecase.selected.kind==='usecase' && state.usecase.selected.id===u.id) || isMultiSelected('usecase','usecase',u.id);
   ctx.font='500 12.5px "IBM Plex Sans KR", sans-serif';
   const lines = wrapTextLines(ctx, u.name, 130);
   u.rx = Math.max(76, Math.max(...lines.map(l=>ctx.measureText(l).width))/2 + 22);
@@ -2068,6 +2162,33 @@ function renderActive(){
 /* ---------- Delete selection ---------- */
 function deleteSelectedElement(){
   const tab = state.activeTab;
+  if (state[tab].multi && state[tab].multi.length>1){
+    const ids = state[tab].multi;
+    if (tab==='class'){
+      const nodeIds = new Set(ids.filter(m=>m.kind==='node').map(m=>m.id));
+      state.class.nodes = state.class.nodes.filter(n=>!nodeIds.has(n.id));
+      state.class.edges = state.class.edges.filter(e=>!nodeIds.has(e.from) && !nodeIds.has(e.to));
+      renderClass();
+    } else if (tab==='sequence'){
+      const lifeIds = new Set(ids.filter(m=>m.kind==='lifeline').map(m=>m.id));
+      state.sequence.lifelines = state.sequence.lifelines.filter(l=>!lifeIds.has(l.id));
+      state.sequence.messages = state.sequence.messages.filter(m=>!lifeIds.has(m.from) && !lifeIds.has(m.to));
+      renderSequence();
+    } else {
+      const actorIds = new Set(ids.filter(m=>m.kind==='actor').map(m=>m.id));
+      const ucIds = new Set(ids.filter(m=>m.kind==='usecase').map(m=>m.id));
+      const bndIds = new Set(ids.filter(m=>m.kind==='boundary').map(m=>m.id));
+      state.usecase.actors = state.usecase.actors.filter(a=>!actorIds.has(a.id));
+      state.usecase.usecases = state.usecase.usecases.filter(u=>!ucIds.has(u.id));
+      state.usecase.boundaries = state.usecase.boundaries.filter(b=>!bndIds.has(b.id));
+      state.usecase.edges = state.usecase.edges.filter(e=>!actorIds.has(e.from) && !actorIds.has(e.to) && !ucIds.has(e.from) && !ucIds.has(e.to));
+      renderUsecase();
+    }
+    const count = ids.length;
+    clearMulti(tab); state[tab].selected = null;
+    showToast(`${count}개 삭제되었습니다.`);
+    return;
+  }
   if (tab==='class'){
     const s = state.class.selected; if (!s){ showToast('선택된 요소가 없습니다.'); return; }
     if (s.kind==='node'){
@@ -2128,8 +2249,24 @@ $('#canvas-class').addEventListener('mousedown',(e)=>{
   const tool = state.tool;
   if (tool==='select'){
     const hit = hitTestClass(pos.x,pos.y);
-    state.class.selected = hit ? {kind:hit.kind, id:hit.id} : null;
-    if (hit && hit.kind==='node') state.drag = {kind:'class-node', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+    if (hit && hit.kind==='node' && isMultiSelected('class','node',hit.id) && state.class.multi.length>1){
+      // 이미 다중 선택된 클래스 중 하나를 드래그 → 선택된 것 전부 같이 이동
+      const offsets = state.class.multi.filter(m=>m.kind==='node').map(m=>{
+        const el = findClassElement(m.id);
+        return {id:m.id, offX:pos.x-el.x, offY:pos.y-el.y};
+      });
+      state.drag = {kind:'class-multi-drag', offsets};
+    } else if (hit){
+      clearMulti('class');
+      setStatus(TOOL_HINTS[state.tool]||'');
+      state.class.selected = {kind:hit.kind, id:hit.id};
+      if (hit.kind==='node') state.drag = {kind:'class-node', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+    } else {
+      // 빈 캔버스: 좌클릭 드래그로 사각형(마퀴)을 그려 여러 클래스를 한 번에 선택
+      if (!e.shiftKey) clearMulti('class');
+      state.class.selected = null;
+      state.drag = {kind:'box-select', tab:'class', additive:e.shiftKey, x0:pos.x, y0:pos.y, x1:pos.x, y1:pos.y};
+    }
     renderClass();
   } else if (tool==='add-class' || tool==='add-interface'){
     const node = newClassNode(Math.max(10,pos.x-84), Math.max(10,pos.y-45));
@@ -2159,9 +2296,18 @@ $('#canvas-class').addEventListener('mousedown',(e)=>{
 });
 $('#canvas-class').addEventListener('mousemove',(e)=>{
   const pos = classMousePos(e); state.mouse = pos;
-  if (state.drag && state.drag.kind==='class-node'){
-    const node = findClassElement(state.drag.id);
-    if (node){ node.x = pos.x-state.drag.offX; node.y = pos.y-state.drag.offY; renderClass(); }
+  const d = state.drag;
+  if (d && d.kind==='class-node'){
+    const node = findClassElement(d.id);
+    if (node){ node.x = pos.x-d.offX; node.y = pos.y-d.offY; renderClass(); }
+  } else if (d && d.kind==='class-multi-drag'){
+    d.offsets.forEach(o=>{
+      const node = findClassElement(o.id);
+      if (node){ node.x = pos.x-o.offX; node.y = pos.y-o.offY; }
+    });
+    renderClass();
+  } else if (d && d.kind==='box-select' && d.tab==='class'){
+    d.x1 = pos.x; d.y1 = pos.y; renderClass();
   } else if (state.tool.startsWith('rel-') && state.pendingSource){
     renderClass();
   }
@@ -2182,8 +2328,22 @@ seqCanvas().addEventListener('mousedown',(e)=>{
   const tool = state.tool;
   if (tool==='select'){
     const hit = hitTestSequence(pos.x,pos.y);
-    state.sequence.selected = hit ? {kind:hit.kind, id:hit.id} : null;
-    if (hit && hit.kind==='lifeline') state.drag = {kind:'seq-lifeline', id:hit.id, offX:pos.x-hit.el.x};
+    if (hit && hit.kind==='lifeline' && isMultiSelected('sequence','lifeline',hit.id) && state.sequence.multi.length>1){
+      const offsets = state.sequence.multi.filter(m=>m.kind==='lifeline').map(m=>{
+        const l = state.sequence.lifelines.find(x=>x.id===m.id);
+        return {id:m.id, offX:pos.x-l.x};
+      });
+      state.drag = {kind:'seq-multi-drag', offsets};
+    } else if (hit){
+      clearMulti('sequence');
+      setStatus(TOOL_HINTS[state.tool]||'');
+      state.sequence.selected = {kind:hit.kind, id:hit.id};
+      if (hit.kind==='lifeline') state.drag = {kind:'seq-lifeline', id:hit.id, offX:pos.x-hit.el.x};
+    } else {
+      if (!e.shiftKey) clearMulti('sequence');
+      state.sequence.selected = null;
+      state.drag = {kind:'box-select', tab:'sequence', additive:e.shiftKey, x0:pos.x, y0:pos.y, x1:pos.x, y1:pos.y};
+    }
     renderSequence();
   } else if (tool==='add-actor' || tool==='add-object'){
     const l = newLifeline(Math.max(60,pos.x), tool==='add-actor'?'actor':'object');
@@ -2227,9 +2387,18 @@ seqCanvas().addEventListener('mousedown',(e)=>{
 });
 seqCanvas().addEventListener('mousemove',(e)=>{
   const pos = seqMousePos(e); state.mouse = pos;
-  if (state.drag && state.drag.kind==='seq-lifeline'){
-    const l = state.sequence.lifelines.find(x=>x.id===state.drag.id);
+  const d = state.drag;
+  if (d && d.kind==='seq-lifeline'){
+    const l = state.sequence.lifelines.find(x=>x.id===d.id);
     if (l){ l.x = Math.max(50,pos.x); renderSequence(); }
+  } else if (d && d.kind==='seq-multi-drag'){
+    d.offsets.forEach(o=>{
+      const l = state.sequence.lifelines.find(x=>x.id===o.id);
+      if (l){ l.x = Math.max(50, pos.x-o.offX); }
+    });
+    renderSequence();
+  } else if (d && d.kind==='box-select' && d.tab==='sequence'){
+    d.x1 = pos.x; d.y1 = pos.y; renderSequence();
   } else if (state.tool.startsWith('msg-') && state.pendingSource){
     renderSequence();
   }
@@ -2251,10 +2420,26 @@ $('#canvas-usecase').addEventListener('mousedown',(e)=>{
   const tool = state.tool;
   if (tool==='select'){
     const hit = hitTestUsecase(pos.x,pos.y);
-    state.usecase.selected = hit ? {kind:hit.kind, id:hit.id} : null;
-    if (hit && hit.kind==='actor') state.drag={kind:'uc-actor', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
-    else if (hit && hit.kind==='usecase') state.drag={kind:'uc-usecase', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
-    else if (hit && hit.kind==='boundary') state.drag={kind:'uc-boundary', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+    const draggableHit = hit && (hit.kind==='actor'||hit.kind==='usecase'||hit.kind==='boundary');
+    if (draggableHit && isMultiSelected('usecase',hit.kind,hit.id) && state.usecase.multi.length>1){
+      // 이미 다중 선택된 요소 중 하나를 드래그 → 선택된 것 전부 같이 이동
+      const offsets = state.usecase.multi.map(m=>{
+        const el = findUCElement(m.kind, m.id) || state.usecase.boundaries.find(b=>b.id===m.id);
+        return {kind:m.kind, id:m.id, offX:pos.x-el.x, offY:pos.y-el.y};
+      });
+      state.drag = {kind:'uc-multi-drag', offsets};
+    } else if (hit){
+      clearMulti('usecase');
+      setStatus(TOOL_HINTS[state.tool]||'');
+      state.usecase.selected = {kind:hit.kind, id:hit.id};
+      if (hit.kind==='actor') state.drag={kind:'uc-actor', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+      else if (hit.kind==='usecase') state.drag={kind:'uc-usecase', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+      else if (hit.kind==='boundary') state.drag={kind:'uc-boundary', id:hit.id, offX:pos.x-hit.el.x, offY:pos.y-hit.el.y};
+    } else {
+      if (!e.shiftKey) clearMulti('usecase');
+      state.usecase.selected = null;
+      state.drag = {kind:'box-select', tab:'usecase', additive:e.shiftKey, x0:pos.x, y0:pos.y, x1:pos.x, y1:pos.y};
+    }
     renderUsecase();
   } else if (tool==='add-actor'){
     const a = newActor(pos.x,pos.y); a._isNew=true;
@@ -2287,6 +2472,14 @@ $('#canvas-usecase').addEventListener('mousemove',(e)=>{
   if (d && d.kind==='uc-actor'){ const a=findUCElement('actor',d.id); if(a){a.x=pos.x-d.offX; a.y=pos.y-d.offY; renderUsecase();} }
   else if (d && d.kind==='uc-usecase'){ const u=findUCElement('usecase',d.id); if(u){u.x=pos.x-d.offX; u.y=pos.y-d.offY; renderUsecase();} }
   else if (d && d.kind==='uc-boundary'){ const b=state.usecase.boundaries.find(x=>x.id===d.id); if(b){b.x=pos.x-d.offX; b.y=pos.y-d.offY; renderUsecase();} }
+  else if (d && d.kind==='uc-multi-drag'){
+    d.offsets.forEach(o=>{
+      const el = o.kind==='boundary' ? state.usecase.boundaries.find(x=>x.id===o.id) : findUCElement(o.kind,o.id);
+      if (el){ el.x = pos.x-o.offX; el.y = pos.y-o.offY; }
+    });
+    renderUsecase();
+  }
+  else if (d && d.kind==='box-select' && d.tab==='usecase'){ d.x1=pos.x; d.y1=pos.y; renderUsecase(); }
   else if (d && d.kind==='boundary-draft'){ state.boundaryDraft.x1=pos.x; state.boundaryDraft.y1=pos.y; renderUsecase(); }
   else if (state.tool.startsWith('uc-') && state.pendingSource){ renderUsecase(); }
 });
@@ -2300,8 +2493,42 @@ $('#canvas-usecase').addEventListener('dblclick',(e)=>{
   else openUCEdgeModal(hit.el);
 });
 
+/* 마퀴 박스와 겹치는 요소들을 찾아 다중 선택으로 확정 (Shift 드래그면 기존 선택에 합침) */
+function finalizeBoxSelect(){
+  const d = state.drag;
+  const box = normBox(d.x0,d.y0,d.x1,d.y1);
+  const tab = d.tab;
+  const found = [];
+  if (tab==='class'){
+    state.class.nodes.forEach(n=>{ if (rectsOverlap(box,{x:n.x,y:n.y,w:n.w,h:n.h})) found.push({kind:'node',id:n.id}); });
+  } else if (tab==='usecase'){
+    state.usecase.actors.forEach(a=>{ if (rectsOverlap(box,ucActorBox(a))) found.push({kind:'actor',id:a.id}); });
+    state.usecase.usecases.forEach(u=>{ if (rectsOverlap(box,{x:u.x-u.rx,y:u.y-u.ry,w:u.rx*2,h:u.ry*2})) found.push({kind:'usecase',id:u.id}); });
+    state.usecase.boundaries.forEach(b=>{ if (rectsOverlap(box,{x:b.x,y:b.y,w:b.w,h:b.h})) found.push({kind:'boundary',id:b.id}); });
+  } else if (tab==='sequence'){
+    state.sequence.lifelines.forEach(l=>{
+      const top = l._boxTop!==undefined? l._boxTop: SEQ_HEADER_Y;
+      const bottom = l._boxBottom!==undefined? l._boxBottom: SEQ_HEADER_Y+SEQ_ACTOR_H;
+      if (rectsOverlap(box,{x:l.x-45,y:top,w:90,h:bottom-top})) found.push({kind:'lifeline',id:l.id});
+    });
+  }
+  let result = found;
+  if (d.additive){
+    const existing = state[tab].multi || [];
+    const merged = existing.slice();
+    found.forEach(f=>{ if (!merged.some(m=>m.kind===f.kind && m.id===f.id)) merged.push(f); });
+    result = merged;
+  }
+  state[tab].multi = result;
+  state[tab].selected = result.length===1 ? {kind:result[0].kind, id:result[0].id} : null;
+  if (result.length>0) setStatus(`${result.length}개 선택됨 (Delete: 한 번에 삭제, 드래그: 함께 이동)`);
+  else setStatus(TOOL_HINTS[state.tool]||'');
+}
 /* ---------- Shared mouseup (ends any active drag / finalizes boundary draft) ---------- */
 window.addEventListener('mouseup',()=>{
+  if (state.drag && state.drag.kind==='box-select'){
+    finalizeBoxSelect();
+  }
   if (state.drag && state.drag.kind==='boundary-draft'){
     const d = state.boundaryDraft;
     state.boundaryDraft = null;
@@ -2580,7 +2807,7 @@ function downloadBlob(blob, filename){
   URL.revokeObjectURL(url);
 }
 function stripPrivate(obj){
-  return JSON.parse(JSON.stringify(obj, (k,v)=> (k==='selected'||k==='_isNew') ? undefined : v));
+  return JSON.parse(JSON.stringify(obj, (k,v)=> (k==='selected'||k==='_isNew'||k==='multi') ? undefined : v));
 }
 function exportJSON(tab){
   let data;
@@ -2653,6 +2880,7 @@ function updateBadge(){
 }
 
 function switchTab(tab){
+  clearMulti(state.activeTab);
   state.activeTab = tab;
   $all('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
   $all('.canvas-wrap').forEach(w => w.classList.toggle('hidden', w.id !== 'wrap-'+tab));
